@@ -166,6 +166,7 @@ func DecodeNxAction(data []byte) Action {
 	case NXAST_NAT:
 		a = new(NXActionCTNAT)
 	case NXAST_CONTROLLER2:
+		a = new(NXActionController2)
 	case NXAST_SAMPLE2:
 	case NXAST_OUTPUT_TRUNC:
 	case NXAST_CT_CLEAR:
@@ -1456,5 +1457,83 @@ func NewNXActionController(controllerID uint16) *NXActionController {
 	a.NXActionHeader = NewNxActionHeader(NXAST_CONTROLLER)
 	a.ControllerID = controllerID
 	a.Length = a.NXActionHeader.Len() + 6
+	return a
+}
+
+// NXActionController2 is NX action to output packet to the Controller set with a specified ID.
+type NXActionController2 struct {
+	*NXActionHeader
+	MaxLen       uint16
+	ControllerID uint16
+	Reason       uint8
+	Userdata     uint8
+	Pause        bool
+}
+
+func (a *NXActionController2) Len() uint16 {
+	return a.NXActionHeader.Len() + 7
+}
+
+func (a *NXActionController2) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, a.Len())
+	var b []byte
+	n := 0
+	a.Length = a.Len()
+	b, err = a.NXActionHeader.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	copy(data[n:], b)
+	n += len(b)
+	binary.BigEndian.PutUint16(data[n:], a.MaxLen)
+	n += 2
+	binary.BigEndian.PutUint16(data[n:], a.ControllerID)
+	n += 2
+	data[n] = a.Reason
+	n += 1
+	data[n] = a.Userdata
+	n += 1
+	pause := uint8(0)
+	if a.Pause {
+		pause = 1
+	}
+	data[n] = pause
+
+	return data, nil
+}
+
+func (a *NXActionController2) UnmarshalBinary(data []byte) error {
+	a.NXActionHeader = new(NXActionHeader)
+	n := 0
+	err := a.NXActionHeader.UnmarshalBinary(data[n:])
+	if err != nil {
+		return err
+	}
+	if len(data) < int(a.Length) {
+		return errors.New("the []byte is too short to unmarshal a full NXActionController message")
+	}
+	n += int(a.NXActionHeader.Len())
+	a.MaxLen = binary.BigEndian.Uint16(data[n:])
+	n += 2
+	a.ControllerID = binary.BigEndian.Uint16(data[n:])
+	n += 2
+	a.Reason = data[n]
+	n += 1
+	a.Userdata = data[n]
+	n += 1
+	pause := false
+	if data[n] > 0 {
+		pause = true
+	}
+	a.Pause = pause
+
+	return nil
+}
+
+func NewNXActionController2(controllerID uint16) *NXActionController2 {
+	a := new(NXActionController2)
+	a.NXActionHeader = NewNxActionHeader(NXAST_CONTROLLER2)
+	a.ControllerID = controllerID
+	a.Length = a.Len()
 	return a
 }
