@@ -841,6 +841,7 @@ func (v *VendorHeader) UnmarshalBinary(data []byte) error {
 	n += 4
 	v.ExperimenterType = binary.BigEndian.Uint32(data[n:])
 	n += 4
+	log.Infof("!!!!!len: %d", v.Header.Length)
 	if n < int(v.Header.Length) {
 		var err error
 		v.VendorData, err = decodeVendorData(v.ExperimenterType, data[n:v.Header.Length])
@@ -848,7 +849,6 @@ func (v *VendorHeader) UnmarshalBinary(data []byte) error {
 			return err
 		}
 	}
-	log.Infof("!!!!!len: %d", v.Header.Length)
 	return nil
 }
 
