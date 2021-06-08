@@ -11,7 +11,6 @@ package openflow13
 import (
 	"encoding/binary"
 	"errors"
-	log "github.com/sirupsen/logrus"
 	"net"
 
 	"antrea-io/libOpenflow/common"
@@ -100,7 +99,6 @@ const (
 )
 
 func Parse(b []byte) (message util.Message, err error) {
-	log.Infof("=============WTF type you are? %d", b[1])
 	switch b[1] {
 	case Type_Hello:
 		message = new(common.Hello)
@@ -143,9 +141,6 @@ func Parse(b []byte) (message util.Message, err error) {
 		message = NewSetConfig()
 		err = message.UnmarshalBinary(b)
 	case Type_PacketIn:
-		log.Infof("WOC packetin")
-		log.Infof("duo JB chang ne %d", len(b))
-		log.Infof("kankan byte: %s", b)
 		message = new(PacketIn)
 		err = message.UnmarshalBinary(b)
 	case Type_FlowRemoved:
@@ -841,7 +836,6 @@ func (v *VendorHeader) UnmarshalBinary(data []byte) error {
 	n += 4
 	v.ExperimenterType = binary.BigEndian.Uint32(data[n:])
 	n += 4
-	log.Infof("!!!!!len: %d", v.Header.Length)
 	if n < int(v.Header.Length) {
 		var err error
 		v.VendorData, err = decodeVendorData(v.ExperimenterType, data[n:v.Header.Length])

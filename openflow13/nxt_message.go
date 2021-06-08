@@ -3,9 +3,9 @@ package openflow13
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/contiv/libOpenflow/protocol"
 	log "github.com/sirupsen/logrus"
 
+	"antrea-io/libOpenflow/protocol"
 	"antrea-io/libOpenflow/util"
 )
 
@@ -290,19 +290,6 @@ const (
 	NXCPT_ODP_PORT    = 0x8008
 )
 
-// nx_continuation_prop_type
-// const (
-// 	NXCPT_BRIDGE = iota
-// 	NXCPT_STACK
-// 	NXCPT_MIRRORS
-// 	NXCPT_CONNTRACKED
-// 	NXCPT_TABLE_ID
-// 	NXCPT_COOKIE
-// 	NXCPT_ACTIONS
-// 	NXCPT_ACTION_SET
-// 	NXCPT_ODP_PORT
-// )
-
 type ContinuationPropBridge struct {
 	*PropHeader /* Type: NXCPT_BRIDGE */
 	Bridge      [4]uint32
@@ -315,9 +302,9 @@ func (p *ContinuationPropBridge) Len() (n uint16) {
 
 func (p *ContinuationPropBridge) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
+	n := 0
 	p.Length = p.PropHeader.Len() + 16
 	var b []byte
-	n := 0
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -366,9 +353,9 @@ func (p *ContinuationPropStack) Len() (n uint16) {
 
 func (p *ContinuationPropStack) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
+	n := 0
 	p.Length = p.PropHeader.Len() + uint16(len(p.Stack))
 	var b []byte
-	n := 0
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -409,9 +396,9 @@ func (p *ContinuationPropMirrors) Len() (n uint16) {
 
 func (p *ContinuationPropMirrors) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
+	n := 0
 	p.Length = p.PropHeader.Len() + 4
 	var b []byte
-	n := 0
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -450,9 +437,9 @@ func (p *ContinuationPropConntracked) Len() (n uint16) {
 
 func (p *ContinuationPropConntracked) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
+	n := 0
 	p.Length = p.PropHeader.Len()
 	var b []byte
-	n := 0
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -490,9 +477,9 @@ func (p *ContinuationPropTableID) Len() (n uint16) {
 
 func (p *ContinuationPropTableID) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
+	n := 0
 	p.Length = p.PropHeader.Len() + 1
 	var b []byte
-	n := 0
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -524,8 +511,8 @@ func (p *ContinuationPropTableID) UnmarshalBinary(data []byte) error {
 
 type ContinuationPropCookie struct {
 	*PropHeader /* Type: NXCPT_COOKIE */
-	Cookie      uint64
 	pad         [4]uint8
+	Cookie      uint64
 }
 
 func (p *ContinuationPropCookie) Len() (n uint16) {
@@ -534,9 +521,9 @@ func (p *ContinuationPropCookie) Len() (n uint16) {
 
 func (p *ContinuationPropCookie) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
-	p.Length = p.PropHeader.Len() + 8
-	var b []byte
 	n := 0
+	p.Length = p.PropHeader.Len()
+	var b []byte
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -566,11 +553,13 @@ func (p *ContinuationPropCookie) UnmarshalBinary(data []byte) error {
 
 type ContinuationPropActions struct {
 	*PropHeader /* Type: NXCPT_ACTIONS */
+	pad         [4]uint8
 	Actions     []Action
+	pad2        []uint8
 }
 
 func (p *ContinuationPropActions) Len() (n uint16) {
-	n = p.PropHeader.Len()
+	n = p.PropHeader.Len() + 4
 	for _, action := range p.Actions {
 		n += action.Len()
 	}
@@ -580,15 +569,16 @@ func (p *ContinuationPropActions) Len() (n uint16) {
 
 func (p *ContinuationPropActions) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
+	n := 0
 	p.Length = p.Len()
 	var b []byte
-	n := 0
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
 	copy(data[n:], b)
 	n += int(p.PropHeader.Len())
+	n += 4
 	for _, action := range p.Actions {
 		b, err = action.MarshalBinary()
 		if err != nil {
@@ -611,6 +601,7 @@ func (p *ContinuationPropActions) UnmarshalBinary(data []byte) error {
 		return errors.New("the []byte is too short to unmarshal a full PacketIn2Prop* message")
 	}
 	n += int(p.PropHeader.Len())
+	n += 4
 	for n < int(p.Length) {
 		act, err := DecodeAction(data[n:])
 		if err != nil {
@@ -624,11 +615,13 @@ func (p *ContinuationPropActions) UnmarshalBinary(data []byte) error {
 
 type ContinuationPropActionSet struct {
 	*PropHeader /* Type: NXCPT_ACTION_SET */
+	pad         [4]uint8
 	ActionSet   []Action
+	pad2        []uint8
 }
 
 func (p *ContinuationPropActionSet) Len() (n uint16) {
-	n = p.PropHeader.Len()
+	n = p.PropHeader.Len() + 4
 	for _, action := range p.ActionSet {
 		n += action.Len()
 	}
@@ -638,15 +631,16 @@ func (p *ContinuationPropActionSet) Len() (n uint16) {
 
 func (p *ContinuationPropActionSet) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
+	n := 0
 	p.Length = p.Len()
 	var b []byte
-	n := 0
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
 	copy(data[n:], b)
 	n += int(p.PropHeader.Len())
+	n += 4
 	for _, action := range p.ActionSet {
 		b, err = action.MarshalBinary()
 		if err != nil {
@@ -669,6 +663,7 @@ func (p *ContinuationPropActionSet) UnmarshalBinary(data []byte) error {
 		return errors.New("the []byte is too short to unmarshal a full PacketIn2Prop* message")
 	}
 	n += int(p.PropHeader.Len())
+	n += 4
 	for n < int(p.Length) {
 		act, err := DecodeAction(data[n:])
 		if err != nil {
@@ -691,9 +686,9 @@ func (p *ContinuationPropOdpPort) Len() (n uint16) {
 
 func (p *ContinuationPropOdpPort) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
+	n := 0
 	p.Length = p.PropHeader.Len() + 4
 	var b []byte
-	n := 0
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -724,7 +719,7 @@ func (p *ContinuationPropOdpPort) UnmarshalBinary(data []byte) error {
 // Decode Continuation Property types.
 func DecodeContinuationProp(data []byte) (Property, error) {
 	t := binary.BigEndian.Uint16(data[:2])
-	log.Infof("=============continuation what prop you are? %d", t)
+	log.Infof("Decoding Continuation Prop Type: %d", t)
 	var p Property
 	switch t {
 	case NXCPT_BRIDGE:
@@ -747,9 +742,29 @@ func DecodeContinuationProp(data []byte) (Property, error) {
 		p = new(ContinuationPropOdpPort)
 	}
 	err := p.UnmarshalBinary(data)
-	log.Infof("%s", p)
 	if err != nil {
 		return p, err
+	}
+
+	switch t {
+	case NXCPT_BRIDGE:
+		log.Infof("NXCPT_BRIDGE Header: %s Bridge: %s", p.(*ContinuationPropBridge).Header(), p.(*ContinuationPropBridge).Bridge)
+	case NXCPT_STACK:
+		log.Infof("NXCPT_STACK Header: %s Stack: %s", p.(*ContinuationPropStack).Header(), p.(*ContinuationPropStack).Stack)
+	case NXCPT_MIRRORS:
+		log.Infof("NXCPT_MIRRORS Header: %s Mirror: %s", p.(*ContinuationPropMirrors).Header(), p.(*ContinuationPropMirrors).Mirrors)
+	case NXCPT_CONNTRACKED:
+		log.Infof("NXCPT_CONNTRACKED Header: %s", p.(*ContinuationPropConntracked).Header())
+	case NXCPT_TABLE_ID:
+		log.Infof("NXCPT_TABLE_ID Header: %s TableID: %s", p.(*ContinuationPropTableID).Header(), p.(*ContinuationPropTableID).TableID)
+	case NXCPT_COOKIE:
+		log.Infof("NXCPT_COOKIE Header: %s Cookie: %s", p.(*ContinuationPropCookie).Header(), p.(*ContinuationPropCookie).Cookie)
+	case NXCPT_ACTIONS:
+		log.Infof("NXCPT_ACTIONS Header: %s Actions: %s", p.(*ContinuationPropActions).Header(), p.(*ContinuationPropActions).Actions)
+	case NXCPT_ACTION_SET:
+		log.Infof("NXCPT_ACTION_SET Header: %s ActionSet: %s", p.(*ContinuationPropActionSet).Header(), p.(*ContinuationPropActionSet).ActionSet)
+	case NXCPT_ODP_PORT:
+		log.Infof("NXCPT_ODP_PORT Header: %s OdpPort: %s", p.(*ContinuationPropOdpPort).Header(), p.(*ContinuationPropOdpPort).OdpPort)
 	}
 	return p, nil
 }
@@ -787,9 +802,9 @@ func (p *PacketIn2PropPacket) Len() (n uint16) {
 
 func (p *PacketIn2PropPacket) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
+	n := 0
 	p.Length = p.PropHeader.Len() + p.Packet.Len()
 	var b []byte
-	n := 0
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -835,9 +850,9 @@ func (p *PacketIn2PropFullLen) Len() (n uint16) {
 
 func (p *PacketIn2PropFullLen) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
+	n := 0
 	p.Length = p.PropHeader.Len() + 4
 	var b []byte
-	n := 0
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -876,9 +891,9 @@ func (p *PacketIn2PropBufferID) Len() (n uint16) {
 
 func (p *PacketIn2PropBufferID) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
+	n := 0
 	p.Length = p.PropHeader.Len() + 4
 	var b []byte
-	n := 0
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -918,9 +933,9 @@ func (p *PacketIn2PropTableID) Len() (n uint16) {
 
 func (p *PacketIn2PropTableID) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
+	n := 0
 	p.Length = p.PropHeader.Len() + 1
 	var b []byte
-	n := 0
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -962,9 +977,9 @@ func (p *PacketIn2PropCookie) Len() (n uint16) {
 
 func (p *PacketIn2PropCookie) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
-	p.Length = p.PropHeader.Len() + 8
-	var b []byte
 	n := 0
+	p.Length = p.Len()
+	var b []byte
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -1004,9 +1019,9 @@ func (p *PacketIn2PropReason) Len() (n uint16) {
 
 func (p *PacketIn2PropReason) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
+	n := 0
 	p.Length = p.PropHeader.Len() + 1
 	var b []byte
-	n := 0
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -1039,7 +1054,7 @@ func (p *PacketIn2PropReason) UnmarshalBinary(data []byte) error {
 type PacketIn2PropMetadata struct {
 	*PropHeader /* Type: NXPINT_METADATA */
 	Fields      []MatchField
-	pad         [4]uint8
+	pad         []uint8
 }
 
 func (p *PacketIn2PropMetadata) Len() (n uint16) {
@@ -1052,13 +1067,13 @@ func (p *PacketIn2PropMetadata) Len() (n uint16) {
 
 func (p *PacketIn2PropMetadata) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
+	n := 0
 	l := p.PropHeader.Len()
 	for _, field := range p.Fields {
 		l += field.Len()
 	}
 	p.Length = l
 	var b []byte
-	n := 0
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -1067,12 +1082,12 @@ func (p *PacketIn2PropMetadata) MarshalBinary() (data []byte, err error) {
 	n += int(p.PropHeader.Len())
 
 	for _, field := range p.Fields {
-		b, err := field.MarshalBinary()
+		b, err = field.MarshalBinary()
 		if err != nil {
 			return nil, err
 		}
 		copy(data[n:], b)
-		n += len(b)
+		n += int(field.Len())
 	}
 	return
 }
@@ -1091,7 +1106,7 @@ func (p *PacketIn2PropMetadata) UnmarshalBinary(data []byte) error {
 
 	for n < int(p.Length) {
 		field := new(MatchField)
-		if err := field.UnmarshalBinary(data[n:]); err != nil {
+		if err = field.UnmarshalBinary(data[n:]); err != nil {
 			return err
 		}
 		p.Fields = append(p.Fields, *field)
@@ -1102,28 +1117,28 @@ func (p *PacketIn2PropMetadata) UnmarshalBinary(data []byte) error {
 
 type PacketIn2PropUserdata struct {
 	*PropHeader /* Type: NXPINT_USERDATA */
-	Userdata    uint8
-	pad         [3]uint8
+	Userdata    []uint8
+	pad         []uint8
 }
 
 func (p *PacketIn2PropUserdata) Len() (n uint16) {
-	return p.PropHeader.Len() + 4
+	n = p.PropHeader.Len() + uint16(len(p.Userdata))
+	return ((n + 7) / 8) * 8
 }
 
 func (p *PacketIn2PropUserdata) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
-	p.Length = p.PropHeader.Len() + 1
-	var b []byte
 	n := 0
+	p.Length = p.PropHeader.Len() + uint16(len(p.Userdata))
+	var b []byte
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
 	copy(data[n:], b)
 	n += int(p.PropHeader.Len())
-	data[n] = p.Userdata
-	n += 1
-	n += 3
+	copy(data[n:], p.Userdata)
+	n += len(p.Userdata)
 	return
 }
 
@@ -1138,46 +1153,33 @@ func (p *PacketIn2PropUserdata) UnmarshalBinary(data []byte) error {
 		return errors.New("the []byte is too short to unmarshal a full PacketIn2Prop* message")
 	}
 	n += int(p.PropHeader.Len())
-	p.Userdata = data[n]
-	n += 1
-	n += 3
+	p.Userdata = data[n:p.Length]
 	return nil
 }
 
 type PacketIn2PropContinuation struct {
-	*PropHeader /* Type: NXPINT_CONTINUATION */
-	pad1        [4]uint8
-	props       []Property
+	*PropHeader  /* Type: NXPINT_CONTINUATION */
+	Continuation []byte
+	pad          []uint8
 }
 
 func (p *PacketIn2PropContinuation) Len() (n uint16) {
-	n = p.PropHeader.Len() + 4
-	for _, prop := range p.props {
-		n += prop.Len()
-	}
-	return
+	n = p.PropHeader.Len() + uint16(len(p.Continuation))
+	// Round it to closest multiple of 8
+	return ((n + 7) / 8) * 8
 }
 
 func (p *PacketIn2PropContinuation) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, p.Len())
-	p.Length = p.Len()
-	var b []byte
 	n := 0
+	var b []byte
 	b, err = p.PropHeader.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
 	copy(data[n:], b)
 	n += int(p.PropHeader.Len())
-	n += 4
-	for _, prop := range p.props {
-		b, err = prop.MarshalBinary()
-		if err != nil {
-			return nil, err
-		}
-		copy(data[n:], b)
-		n += int(prop.Len())
-	}
+	copy(data[n:p.Length], p.Continuation)
 	return
 }
 
@@ -1192,22 +1194,14 @@ func (p *PacketIn2PropContinuation) UnmarshalBinary(data []byte) error {
 		return errors.New("the []byte is too short to unmarshal a full PacketIn2Prop* message")
 	}
 	n += int(p.PropHeader.Len())
-	n += 4
-	for n < int(p.Length) {
-		prop, err := DecodeContinuationProp(data[n:])
-		if err != nil {
-			return errors.New("failed to decode property")
-		}
-		p.props = append(p.props, prop)
-		n += int(prop.Len())
-	}
+	p.Continuation = data[n:p.Length]
 	return nil
 }
 
 // Decode PacketIn2 Property types.
 func DecodePacketIn2Prop(data []byte) (Property, error) {
 	t := binary.BigEndian.Uint16(data[:2])
-	log.Infof("=============what prop you are? %d", t)
+	log.Infof("Decoding PacketIn2 Prop Type: %d", t)
 	var p Property
 	switch t {
 	case NXPINT_PACKET:
@@ -1233,8 +1227,26 @@ func DecodePacketIn2Prop(data []byte) (Property, error) {
 	if err != nil {
 		return p, err
 	}
-	if t == NXPINT_USERDATA {
-		log.Infof("%s", p)
+
+	switch t {
+	case NXPINT_PACKET:
+		log.Infof("NXPINT_PACKET Header: %s Packet: %s", p.(*PacketIn2PropPacket).Header(), p.(*PacketIn2PropPacket).Packet)
+	case NXPINT_FULL_LEN:
+		log.Infof("NXPINT_FULL_LEN Header: %s FullLen: %s", p.(*PacketIn2PropFullLen).Header(), p.(*PacketIn2PropFullLen).FullLen)
+	case NXPINT_BUFFER_ID:
+		log.Infof("NXPINT_BUFFER_ID Header: %s BufferID: %s", p.(*PacketIn2PropBufferID).Header(), p.(*PacketIn2PropBufferID).BufferID)
+	case NXPINT_TABLE_ID:
+		log.Infof("NXPINT_TABLE_ID Header: %s TableID: %s", p.(*PacketIn2PropTableID).Header(), p.(*PacketIn2PropTableID).TableID)
+	case NXPINT_COOKIE:
+		log.Infof("NXPINT_COOKIE Header: %s Cookie: %s", p.(*PacketIn2PropCookie).Header(), p.(*PacketIn2PropCookie).Cookie)
+	case NXPINT_REASON:
+		log.Infof("NXPINT_REASON Header: %s Reason: %s", p.(*PacketIn2PropReason).Header(), p.(*PacketIn2PropReason).Reason)
+	case NXPINT_METADATA:
+		log.Infof("NXPINT_METADATA Header: %s Metadata: %s", p.(*PacketIn2PropMetadata).Header(), p.(*PacketIn2PropMetadata).Fields)
+	case NXPINT_USERDATA:
+		log.Infof("NXPINT_USERDATA Header: %s Userdata: %s", p.(*PacketIn2PropUserdata).Header(), p.(*PacketIn2PropUserdata).Userdata)
+	case NXPINT_CONTINUATION:
+		log.Infof("NXPINT_CONTINUATION Header: %s Continuation: %s", p.(*PacketIn2PropContinuation).Header(), p.(*PacketIn2PropContinuation).Continuation)
 	}
 	return p, nil
 }
@@ -1268,6 +1280,58 @@ func (p *PacketIn2) MarshalBinary() (data []byte, err error) {
 
 func (p *PacketIn2) UnmarshalBinary(data []byte) error {
 	n := 0
+	log.Infof("Start PacketIn2 unmarshalBinary. cur n: %d", n)
+	for n < len(data) {
+		log.Infof("cur n: %d", n)
+		prop, err := DecodePacketIn2Prop(data[n:])
+		if err != nil {
+			break
+		}
+		p.Props = append(p.Props, prop)
+		n += int(prop.Len())
+	}
+
+	log.Infof("PacketIn2 unmarshalBinary done. cur n: %d, data len: %d", n, len(data))
+	return nil
+}
+
+func NewPacketIn2(props []Property) *VendorHeader {
+	msg := NewNXTVendorHeader(Type_PacketIn2)
+	msg.VendorData = &PacketIn2{
+		Props: props,
+	}
+	return msg
+}
+
+type Resume struct {
+	Props []Property
+}
+
+func (p *Resume) Len() (n uint16) {
+	n = 0
+	for _, prop := range p.Props {
+		n += prop.Len()
+	}
+	// Round it to closest multiple of 8
+	return ((n + 7) / 8) * 8
+}
+
+func (p *Resume) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, p.Len())
+	n := 0
+	for _, prop := range p.Props {
+		b, err := prop.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		copy(data[n:], b)
+		n += int(prop.Len())
+	}
+	return
+}
+
+func (p *Resume) UnmarshalBinary(data []byte) error {
+	n := 0
 	for n < len(data) {
 		log.Infof("%d", n)
 		prop, err := DecodePacketIn2Prop(data[n:])
@@ -1278,13 +1342,13 @@ func (p *PacketIn2) UnmarshalBinary(data []byte) error {
 		n += int(prop.Len())
 	}
 
-	log.Infof("cur n: %d, data len: %d", n, len(data))
+	log.Infof("Resume unmarshalBinary done. cur n: %d, data len: %d", n, len(data))
 	return nil
 }
 
-func NewPacketIn2(props []Property) *VendorHeader {
-	msg := NewNXTVendorHeader(Type_PacketIn2)
-	msg.VendorData = &PacketIn2{
+func NewResume(props []Property) *VendorHeader {
+	msg := NewNXTVendorHeader(Type_Resume)
+	msg.VendorData = &Resume{
 		Props: props,
 	}
 	return msg

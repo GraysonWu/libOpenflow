@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"net"
 	"strings"
 
@@ -93,6 +94,7 @@ func (m *MessageStream) outbound() {
 		case msg := <-m.Outbound:
 			// Forward outbound messages to conn
 			data, _ := msg.MarshalBinary()
+			log.Infof("Sending bytes to OVS: %v", hex.Dump(data))
 			if _, err := m.conn.Write(data); err != nil {
 				log.Warnln("OutboundError:", err)
 				m.Error <- err
@@ -114,6 +116,7 @@ func (m *MessageStream) inbound() {
 	buf := <-m.pool.Empty
 	for {
 		n, err := m.conn.Read(tmp)
+		log.Infof("Receiving bytes from OVS: %v", hex.Dump(tmp[:n]))
 		if err != nil {
 			// Handle explicitly disconnecting by closing connection
 			if strings.Contains(err.Error(), "use of closed network connection") {
