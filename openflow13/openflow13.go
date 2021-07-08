@@ -13,9 +13,9 @@ import (
 	"errors"
 	"net"
 
-	"antrea-io/libOpenflow/common"
-	"antrea-io/libOpenflow/protocol"
-	"antrea-io/libOpenflow/util"
+	"github.com/graysonwu/libOpenflow/common"
+	"github.com/graysonwu/libOpenflow/protocol"
+	"github.com/graysonwu/libOpenflow/util"
 )
 
 const (

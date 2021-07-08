@@ -1,4 +1,4 @@
-module antrea-io/libOpenflow
+module github.com/graysonwu/libOpenflow
 
 go 1.15
 

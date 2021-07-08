@@ -5,8 +5,8 @@ import (
 	"errors"
 	log "github.com/sirupsen/logrus"
 
-	"antrea-io/libOpenflow/protocol"
-	"antrea-io/libOpenflow/util"
+	"github.com/graysonwu/libOpenflow/protocol"
+	"github.com/graysonwu/libOpenflow/util"
 )
 
 // Nicira extension messages.

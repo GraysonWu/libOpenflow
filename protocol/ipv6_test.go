@@ -7,7 +7,7 @@ import (
 	"net"
 	"testing"
 
-	"antrea-io/libOpenflow/util"
+	"github.com/graysonwu/libOpenflow/util"
 )
 
 func TestIPv6Option(t *testing.T) {

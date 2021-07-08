@@ -7,7 +7,7 @@ import (
 	"errors"
 	"sync/atomic"
 
-	"antrea-io/libOpenflow/util"
+	"github.com/graysonwu/libOpenflow/util"
 )
 
 var messageXid uint32 = 1
